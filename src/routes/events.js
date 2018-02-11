@@ -1,8 +1,9 @@
 const { Router } = require('express');
-const { Event } = require('../db/db');
+const { Event, sequelize } = require('../db/db');
 const log = require('../utils/log');
 
 const router = Router();
+const { ValidationError } = sequelize;
 
 router.get('/', async (req, res) => {
   try {
@@ -59,6 +60,36 @@ router.delete('/:id', async (req, res) => {
   } else {
     log.debug(`Event with id ${id} not found. No models deleted`);
     res.sendStatus(400);
+  }
+});
+
+router.post('/', async (req, res) => {
+  const {
+    name, begin_date, end_date,
+    venue, latitude, longitude,
+  } = req.body;
+  let model;
+  try {
+    log.debug('Creating new event');
+    model = await Event.create({
+      name,
+      begin_date,
+      end_date,
+      venue,
+      latitude,
+      longitude,
+    });
+    log.debug(`Event created with id ${model.id}`);
+    res.send(model);
+  } catch (error) {
+    log.error('There was an error saving the model with the values', req.body);
+    log.error(error.stack);
+    if (error instanceof ValidationError) {
+      log.debug('Error is instance of ValidationError');
+      res.status(422).send(error.errors);
+    } else {
+      res.sendStatus(500);
+    }
   }
 });
 
