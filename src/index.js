@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const bodyParser = require('body-parser');
 const log = require('./utils/log');
 const eventRoutes = require('./routes/events');
 const { sequelize } = require('./db/db');
@@ -7,6 +8,8 @@ const { sequelize } = require('./db/db');
 const main = async () => {
   const app = express();
   const port = process.env.PORT || 3000;
+
+  app.use(bodyParser.json());
 
   app.use((req, res, next) => {
     const { method, url, params } = req;
