@@ -5,6 +5,18 @@ const log = require('../utils/log');
 const router = Router();
 const { ValidationError } = sequelize;
 
+const extractBodyVariables = ({
+  name, begin_date, end_date,
+  venue, latitude, longitude,
+}) => ({
+  name,
+  begin_date,
+  end_date,
+  venue,
+  latitude,
+  longitude,
+});
+
 router.get('/', async (req, res) => {
   try {
     const timer = log.startTimer();
@@ -64,21 +76,10 @@ router.delete('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const {
-    name, begin_date, end_date,
-    venue, latitude, longitude,
-  } = req.body;
   let model;
   try {
     log.debug('Creating new event');
-    model = await Event.create({
-      name,
-      begin_date,
-      end_date,
-      venue,
-      latitude,
-      longitude,
-    });
+    model = await Event.create(extractBodyVariables(req.body));
     log.debug(`Event created with id ${model.id}`);
     res.send(model);
   } catch (error) {
@@ -90,6 +91,34 @@ router.post('/', async (req, res) => {
     } else {
       res.sendStatus(500);
     }
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  const { id } = req.body;
+  let model;
+  try {
+    log.debug(`Trying to get event model with id ${id}`);
+    model = await Event.findById(id);
+  } catch (error) {
+    log.error(`There was an error finding an event with the id ${id}`);
+    log.error(error.stack);
+    res.sendStatus(500);
+  }
+  if (model) {
+    log.debug(`Event with id ${id} found, trying to edit`);
+    try {
+      await model.update(extractBodyVariables(req.body));
+      res.send(model);
+    } catch (error) {
+      log.error(`There was an error editing the event ${id}`);
+      log.error(error.stack);
+      log.debug('The following body was used', req.body);
+      res.sendStatus(500);
+    }
+  } else {
+    log.debug(`Event with id ${id} was not found. No model will be edited`);
+    res.sendStatus(400);
   }
 });
 
